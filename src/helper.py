@@ -1,6 +1,6 @@
 from wserver import Wserver
-from toolkit.kokoo import blink, timer
-from constants import O_CNFG, logging
+from toolkit.kokoo import timer
+from constants import O_CNFG, logging, O_SETG, D_SYMBOL
 from traceback import print_exc
 import pendulum as pdlm
 from login_get_kite import get_kite
@@ -36,7 +36,7 @@ class Helper:
 
     @classmethod
     @is_not_rate_limited
-    def history(cls, instrument_token, previous_history):
+    def historical(cls, instrument_token, previous_history):
         try:
             kwargs = dict(
                 instrument_token=instrument_token,
@@ -44,13 +44,15 @@ class Helper:
                 to_date=pdlm.now().to_datetime_string(),
                 interval="5minute",
             )
-            previous_history = cls.api.history(kwargs)
+            history = cls.api.historical(kwargs)
+            if isinstance(history, list):
+                previous_history = history
+            return previous_history
         except Exception as e:
             print_exc()
             logging.error(f"{e} while getting history")
             timer(5)
-        finally:
-            return previous_history
+            cls.historical(instrument_token, previous_history)
 
     @classmethod
     def get_quote(cls, instrument_token):
@@ -59,7 +61,6 @@ class Helper:
                 timer(1)
                 print("waiting")
             else:
-                print(cls.ws.ltp)
                 return cls.ws.ltp[instrument_token]
         except Exception as e:
             print(f"get_quote {e}")
@@ -124,6 +125,29 @@ class Helper:
     def positions(cls):
         lst = cls.api.positions
         return lst
+
+    @classmethod
+    def entry_order(cls, symbol, exchange, high):
+        try:
+            kwargs = dict(
+                quantity=O_SETG["trade"]["quantity"],
+                product="MIS",
+                side="BUY",
+                symbol=symbol,
+                price=high + 0.5,
+                trigger_price=high,
+                order_type="SL",
+                exchange=exchange,
+            )
+            order_no = Helper.place_order(kwargs)
+            if order_no:
+                logging.debug(f"{order_no=}")
+                return order_no
+            else:
+                print("Order could not be placed")
+        except Exception as e:
+            print_exc()
+            logging.error(f"{e} while get order nos")
 
     @classmethod
     def place_order(cls, kwargs):

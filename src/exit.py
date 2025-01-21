@@ -5,22 +5,51 @@ import numpy as np
 
 
 class Exit:
-    def __init__(self, buy_order: dict, ltp: float):
+    _targets = O_SETG["trade"]["targets"]
+
+    def __init__(self, order_id, instrument_token):
+        self._order_id = order_id
+        self._instrument_token = instrument_token
+        self._orders = []
+        self._orderbook_item = {}
+        self._fn = "set_properties"
+
+    """
+        common method 
+    """
+
+    def _pop_item_from_orderbook(self):
+        for buy_order in self._orders:
+            if self._order_id == buy_order["order_id"]:
+                return buy_order
+
+    def set_properties(self):
+        item = self._pop_item_from_orderbook()
+        self._symbol = item["symbol"]
+        self._exchange = item["exchange"]
+        self._quantity = item["quantity"]
+        self._fn = "check_buy_status"
+
+    def check_buy_status(self):
+        item = self._pop_item_from_orderbook()
+        status = item["status"]
+        if status == "COMPLETE":
+            self.prepare_and_cover()
+        elif status == "CANCELLED" or status == "REJECTED":
+            self._fn = None
+
+    """
+        prepare and cover 
+    """
+
+    def _set_sell_params(self):
         # settings
         threshold = O_SETG["trade"]["threshold"]
-        self._buy_order = buy_order
-        self._symbol = buy_order["symbol"]
-        self._fill_price = buy_order["fill_price"]
-        self._ltp = ltp
         self._threshold = threshold * self._fill_price / 100
-        self._targets = O_SETG["trade"]["targets"]
         self._current_target = 0
-        self._sell_order = ""
-        self._orders = []
         self._stop_price = self._fill_price - self._threshold * 2
-        self._fn = "set_target"
 
-    def set_target(self):
+    def _set_target(self):
         try:
             # Generate bands (merging initial bands)
             self._bands = np.concatenate(
@@ -42,13 +71,12 @@ class Exit:
             self._bands = [round(b * 20) / 20 for b in self._bands]
 
             self._stop_price = self._bands[0]
-            self._fn = "place_initial_stop"
             print(self._bands)
         except Exception as e:
             print_exc()
             print(f"{e} while set target")
 
-    def place_initial_stop(self):
+    def _place_initial_stop(self):
         try:
             """
             price=0,
@@ -57,25 +85,39 @@ class Exit:
             """
             sargs = dict(
                 symbol=self._symbol,
-                quantity=abs(int(self._buy_order["quantity"])),
-                product=self._buy_order["product"],
+                quantity=self._quantity,
+                product="MIS",
                 side="SELL",
                 price=self._stop_price - 10,
                 trigger_price=self._stop_price,
                 order_type="SL",
-                exchange=self._buy_order["exchange"],
+                exchange=self._exchange,
             )
             logging.debug(sargs)
-            self._sell_order = Helper.place_order(sargs)
-            if self._sell_order is None:
+            self._order_id = Helper.place_order(sargs)
+            if self._order_id is None:
+                self._fn = None
                 raise RuntimeError(
-                    f"unable to get order number for {self._buy_order}. please manage"
+                    "unable to get order number for initial stop. please manage"
                 )
             else:
                 self._fn = "update"
         except Exception as e:
             logging.error(f"{e} whle place sell order")
             print_exc()
+
+    def prepare_and_cover(self):
+        try:
+            self._fill_price = Helper.find_fillprice_from_order_id(self._order_id)
+            self._set_sell_params()
+            self._set_target()
+            self._place_initial_stop()
+        except Exception as e:
+            print(f"{e} while prepare and cover")
+
+    """
+        update 
+    """
 
     def _is_exit_conditions(self):
         try:
@@ -95,35 +137,25 @@ class Exit:
         finally:
             return Flag
 
-    def _is_order_completed(self):
+    def _cover_to_close(self):
         try:
-            Flag = False
-            for order in self._orders:
-                if (
-                    self._sell_order == order["order_id"]
-                    and order["status"] == "COMPLETE"
-                ):
-                    logging.info(f"{self._symbol} order {self._sell_order} is complete")
-                    Flag = True
-                    break
+            args = dict(
+                variety="regular",
+                order_id=self._order_id,
+                quantity=self._quantity,
+                order_type="MARKET",
+                trigger_price=0.0,
+                price=0.00,
+            )
+            logging.debug(f"modify order {args}")
+            resp = Helper.modify_order(args)
+            logging.debug(f"order id: {args['order_id']} {resp}")
         except Exception as e:
-            logging.error(f"{e} get order from book")
+            logging.error(f"{e} while exit order")
             print_exc()
-        finally:
-            return Flag
 
-    def update(self):
+    def _update_targets(self):
         try:
-            if self._is_order_completed():
-                logging.info("initial stop loss hit")
-                self.fn = None
-                return
-
-            if self._is_exit_conditions():
-                self.exit_order()
-                self.fn = None
-                return
-
             # Find the new target index for the current LTP
             new_target = np.searchsorted(self._bands, self._ltp, side="right") - 1
             if new_target > self._current_target:
@@ -143,36 +175,42 @@ class Exit:
                 )
             else:  # no change
                 logging.debug(f"LTP {self._ltp}: Stop remains unchanged")
+        except Exception as e:
+            print_exc()
+            logging.error(f"{e} in update target")
+
+    def update(self):
+        try:
+            item = self._pop_item_from_orderbook()
+            status = item["status"]
+            if status == "COMPLETE":
+                logging.info("initial stop loss hit")
+                self._fn = None
+                return
+            elif status == "CANCELLED" or status == "REJECTED":
+                logging.info("order CANCELLED or REJECTED")
+                self._fn = None
+                return
+
+            if self._is_exit_conditions():
+                self._cover_to_close()
+                self._fn = None
+                return
+
+            self._update_targets()
 
         except Exception as e:
             logging.error(f"{e} in update")
             print_exc()
 
-    def exit_order(self):
-        try:
-            args = dict(
-                variety="regular",
-                order_id=self._sell_order,
-                quantity=abs(int(self._buy_order["quantity"])),
-                order_type="MARKET",
-                trigger_price=0.0,
-                price=0.00,
-            )
-            logging.debug(f"modify order {args}")
-            resp = Helper.modify_order(args)
-            logging.debug(f"order id: {args['order_id']} {resp}")
-        except Exception as e:
-            logging.error(f"{e} while exit order")
-            print_exc()
-
-    def run(self, orders, ltp):
+    def run(self, orders, ltps):
         try:
             self._orders = orders
-            self._ltp = ltp
+            self._ltp = ltps[self._instrument_token]
             buy_id = getattr(self, self._fn)()
             return buy_id
         except Exception as e:
-            logging.error(f"{e} in run for buy order {self._symbol}")
+            logging.error(f"{e} in run for buy order {self._order_id}")
             print_exc()
 
 
@@ -187,15 +225,15 @@ if __name__ == "__main__":
             "exchange": "NSE",
         }
 
-        tsl = Exit(id=1, buy_order=buy_order, ltp=100)
+        tsl = Exit(order_id=1, instrument_token=2)
 
         # Simulate LTP updates
         ltp_values = [94, 96, 99, 103, 108, 112, 116, 123, 135, 145]
         for ltp in ltp_values:
-            tsl.set_target()
+            tsl._set_target()
             tsl._ltp = ltp
             action = tsl.update()
-            if action == tsl._id:
+            if action == tsl._order_id:
                 print("Exiting strategy.")
                 break
     except Exception as e:

@@ -2,14 +2,19 @@ import pickle
 from toolkit.fileutils import Fileutils
 from stock_brokers.zerodha.zerodha import Zerodha
 from stock_brokers.bypass.bypass import Bypass
-from constants import S_DATA
+from constants import S_DATA, logging
+from toolkit.kokoo import timer
 
 
 def get_kite(**kwargs):
-    if kwargs.get("api_type") == "bypass":
-        return get_bypass(**kwargs)
-    else:
-        return get_zerodha(**kwargs)
+    try:
+        if kwargs.get("api_type") == "bypass":
+            kite = get_bypass(**kwargs)
+        else:
+            kite = get_zerodha(**kwargs)
+        return kite
+    except Exception as e:
+        logging.error(f"{e} while getting kite obj")
 
 
 def get_bypass(**kwargs):
@@ -60,18 +65,17 @@ def get_zerodha(**kwargs):
             secret=kwargs["secret"],
         )
         kite.authenticate()
-        kite.enctoken = ""
+        # kite.enctoken = ""
+        return kite
     except Exception as e:
         print(f"exception while creating zerodha object {e}")
-    else:
-        return kite
+        timer(2)
+        print("trying to log in again")
+        get_zerodha(**kwargs)
 
 
 if __name__ == "__main__":
-    f = Fileutils()
-    sec_dir = "../../../confid/"
-    dictnry = f.get_lst_fm_yml(sec_dir + "bypass.yaml")
-    dictnry["api_type"] = "bypass"
-    dictnry["sec_dir"] = sec_dir
-    kobj = get_kite(**dictnry)
+    from constants import O_CNFG
+
+    kobj = get_kite(**O_CNFG)
     print(kobj)

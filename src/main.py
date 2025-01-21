@@ -1,10 +1,11 @@
-from constants import logging, D_SYMBOL, O_SETG
+from constants import logging, D_SYMBOL
 from helper import Helper
 from exit import Exit
 from symbols import Symbols
 from toolkit.kokoo import is_time_past
 from traceback import print_exc
-from typing import Optional  # noqa
+from typing import Optional, Tuple  # noqa
+from toolkit.kokoo import timer
 
 
 class Entry:
@@ -20,15 +21,17 @@ class Entry:
         try:
             COUNT = 0
             # get number of candles
-            self.ce_history = Helper.history(
+            self.ce_history = Helper.historical(
                 self.ce["instrument_token"], self.ce_history
             )
-            self.pe_history = Helper.history(
+            self.pe_history = Helper.historical(
                 self.pe["instrument_token"], self.pe_history
             )
             while len(self.ce_history) != len(self.pe_history):
-                self.ce_history = Helper.history(self.ce, self.ce_history)
-                self.pe_history = Helper.history(self.pe, self.pe_history)
+                timer(1)
+                self.ce_history = Helper.historical(self.ce, self.ce_history)
+                timer(1)
+                self.pe_history = Helper.historical(self.pe, self.pe_history)
             else:
                 COUNT = len(self.pe_history)
         except Exception as e:
@@ -40,7 +43,7 @@ class Entry:
     def _get_volume(self, ce_or_pe, idx=-1):
         # get volume from history
         call_or_put = getattr(self, ce_or_pe)
-        data = Helper.history(
+        data = Helper.historical(
             call_or_put["instrument_token"], getattr(self, f"{ce_or_pe}_history")
         )
         if len(data) >= abs(idx):
@@ -62,38 +65,36 @@ class Entry:
         finally:
             return FLAG
 
-    def _get_order_args(self, symbol, high):
-        kwargs = dict(
-            quantity=O_SETG["trade"]["quantity"],
-            product="MIS",
-            side="BUY",
-            symbol=symbol,
-            price=high + 0.5,
-            trigger_price=high,
-            order_type="SL",
-            exchange=D_SYMBOL["exchange"],
-        )
-        return kwargs
+    def _get_order_numbers(self):
+        try:
+            order_nos = []
+            ce_or_pe = ["ce", "pe"]
+            for sym in ce_or_pe:
+                tsym = getattr(self, sym)
+                symbol = tsym["tradingsymbol"]
+                his = getattr(self, f"{sym}_history")
+                high = his[-2]["high"]
+                order_no = Helper.entry_order(symbol, D_SYMBOL["exchange"], high)
+                if order_no:
+                    order_nos.append((order_no, symbol))
+            return order_nos
+        except Exception as e:
+            print_exc()
+            logging.error(f"{e} while get order numbers")
 
     def run(self):
+        CE_VOLUME_INCREASING = False  # Cache the CE volume state
         while self._get_candle_count() == self.candle_count:
-            if self._is_volume_increasing("ce") and self._is_volume_increasing("pe"):
-                print("received signal")
+            if not CE_VOLUME_INCREASING:  # Avoid redundant evaluations
+                CE_VOLUME_INCREASING = self._is_volume_increasing("ce")
+
+            if CE_VOLUME_INCREASING and self._is_volume_increasing("pe"):
+                logging.info("received signal")
                 while self._get_candle_count() <= self.candle_count:
                     print(f"waiting for candle {self.candle_count} to complete")
                 else:
-                    lst = []
-                    lst.append(
-                        self._get_order_args(
-                            self.ce["tradingsymbol"], self.ce_history[-2]["high"]
-                        )
-                    )
-                    lst.append(
-                        self._get_order_args(
-                            self.pe["tradingsymbol"], self.pe_history[-2]["high"]
-                        )
-                    )
-                    return lst
+                    order_nos = self._get_order_numbers()
+                    return order_nos
         else:
             return []
 
@@ -123,18 +124,6 @@ def enter_and_get_args(lst):
         return args
 
 
-def get_order_nos(args: list):
-    order_nos = []
-    for kwargs in args:
-        order_no = Helper.place_order(kwargs)
-        if order_no:
-            order_nos.append(order_no)
-        else:
-            print("Order could not be placed")
-            __import__("sys").exit()
-    return order_nos
-
-
 def _get_trades(orders):
     try:
         completed_trades = []
@@ -158,13 +147,9 @@ def _get_trades(orders):
         return completed_trades
 
 
-def wait_for_trades(orders):
-    """
-    Waits until trades are successfully executed.
+"""
 
-    :param orders: List of order numbers to monitor.
-    :return: List of completed trade details.
-    """
+def wait_for_trades(orders):
     bought = []
     while len(bought) == 0:
         bought = _get_trades(orders)
@@ -172,31 +157,58 @@ def wait_for_trades(orders):
 
 
 def manage_exit_strategies(bought_trades, symbols):
-    """
-    Manages the exit strategies for the provided trades.
+    try:
+        exit_strategies = []
 
-    :param bought_trades: List of completed trades.
-    """
-    exit_strategies = []
+        # Initialize exit strategies
+        for buy_trade in bought_trades:
+            logging.debug(f"{buy_trade=}")
+            buy_trade["fill_price"] = Helper.find_fillprice_from_order_id(
+                buy_trade["order_id"]
+            )
+            tokens = symbols.tokens_from_symbols(buy_trade["symbol"])
+            ltp = Helper.get_quote(tokens[0]["instrument_token"])
+            obj_exit = Exit(buy_trade, ltp)
+            if obj_exit:
+                exit_strategies.append(obj_exit)
+        # Process exit strategies
+        while any(exit_strategies):
+            for obj in exit_strategies:
+                logging.debug(f"{obj=}")
+                tokens = symbols.tokens_from_symbols(obj._symbol)
+                ltp = Helper.get_quote(tokens[0]["instrument_token"])
+                obj.run(Helper.orders(), ltp)
 
-    # Initialize exit strategies
-    for buy_trade in bought_trades:
-        buy_trade["fill_price"] = Helper.find_fillprice_from_order_id(
-            buy_trade["order_id"]
-        )
-        tokens = symbols.tokens_from_symbols(obj["symbol"])
-        ltp = Helper.get_quote(tokens[0])
-        exit_strategies.append(Exit(buy_trade, ltp))
+            # Filter out completed strategies
+            exit_strategies = [obj for obj in exit_strategies if obj._fn is not None]
+    except Exception as e:
+        print_exc()
+        logging.error(f"{e} in manage exit strategies")
+"""
 
-    # Process exit strategies
-    while any(exit_strategies):
-        for obj in exit_strategies:
-            tokens = symbols.tokens_from_symbols(obj["symbol"])
-            ltp = Helper.get_quote(tokens[0])
-            obj.run(Helper.orders, ltp)
 
-        # Filter out completed strategies
-        exit_strategies = [obj for obj in exit_strategies if obj.fn is not None]
+def manage_trades(order_symbols: list, symbols: Symbols):
+    try:
+        exit_strategies = []
+        for list_item in order_symbols:
+            order, tradingsymbol = list_item
+            tokens = symbols.tokens_from_symbols(tradingsymbol)
+            obj_exit = Exit(order, tokens[0]["instrument_token"])
+            if obj_exit:
+                exit_strategies.append(obj_exit)
+
+        while any(exit_strategies):
+            for obj in exit_strategies:
+                logging.debug(f"{obj=}")
+                tokens = symbols.tokens_from_symbols(obj._symbol)
+                ltps = Helper.ws.ltp
+                obj.run(Helper.orders(), ltps)
+
+            # Filter out completed strategies
+            exit_strategies = [obj for obj in exit_strategies if obj._fn is not None]
+    except Exception as e:
+        print_exc()
+        logging.error(f"{e} in manage trades")
 
 
 def main():
@@ -207,21 +219,24 @@ def main():
             # get atm symbols
             lst = symbols.build_chain(Helper.get_quote(symbols.instrument_token))
 
-            # Process trade entry and get arguments
-            args: list = enter_and_get_args(lst)
-            orders = get_order_nos(args)
+            # Process trade entry and get order_no, tsym as tuple
+            order_symbols: list = enter_and_get_args(lst)
 
-            # Wait for trades to complete
+            """
+            # Waitsait for trades to complete
             bought_trades = wait_for_trades(orders)
 
             # Manage exit strategies for completed trades
             manage_exit_strategies(bought_trades, symbols)
+            """
+
+            manage_trades(order_symbols, symbols)
         # TODO
     except KeyboardInterrupt:
         __import__("sys").exit()
     except Exception as e:
         print_exc()
-        logging.error(f"{e} while init")
+        logging.error(f"{e} in  main")
 
 
 if __name__ == "__main__":
