@@ -124,6 +124,7 @@ def enter_and_get_args(lst):
         return args
 
 
+"""
 def _get_trades(orders):
     try:
         completed_trades = []
@@ -147,7 +148,6 @@ def _get_trades(orders):
         return completed_trades
 
 
-"""
 
 def wait_for_trades(orders):
     bought = []
@@ -169,7 +169,7 @@ def manage_exit_strategies(bought_trades, symbols):
             tokens = symbols.tokens_from_symbols(buy_trade["symbol"])
             ltp = Helper.get_quote(tokens[0]["instrument_token"])
             obj_exit = Exit(buy_trade, ltp)
-            if obj_exit:
+            if obj_exit: 
                 exit_strategies.append(obj_exit)
         # Process exit strategies
         while any(exit_strategies):
@@ -199,10 +199,9 @@ def manage_trades(order_symbols: list, symbols: Symbols):
 
         while any(exit_strategies):
             for obj in exit_strategies:
-                logging.debug(f"{obj=}")
-                tokens = symbols.tokens_from_symbols(obj._symbol)
                 ltps = Helper.ws.ltp
                 obj.run(Helper.orders(), ltps)
+                logging.info(f"next going to {obj._fn} for {obj._order_id}")
 
             # Filter out completed strategies
             exit_strategies = [obj for obj in exit_strategies if obj._fn is not None]

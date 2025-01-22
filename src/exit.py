@@ -35,7 +35,8 @@ class Exit:
         status = item["status"]
         if status == "COMPLETE":
             self.prepare_and_cover()
-        elif status == "CANCELLED" or status == "REJECTED":
+        elif status == "CANCELED" or status == "REJECTED":
+            logging.info(f"order {self._order_id} is CANCELED or REJECTED")
             self._fn = None
 
     """
@@ -101,7 +102,7 @@ class Exit:
                     "unable to get order number for initial stop. please manage"
                 )
             else:
-                self._fn = "update"
+                self._fn = "look_to_trail"
         except Exception as e:
             logging.error(f"{e} whle place sell order")
             print_exc()
@@ -116,7 +117,7 @@ class Exit:
             print(f"{e} while prepare and cover")
 
     """
-        update 
+        look_to_trail 
     """
 
     def _is_exit_conditions(self):
@@ -179,7 +180,7 @@ class Exit:
             print_exc()
             logging.error(f"{e} in update target")
 
-    def update(self):
+    def look_to_trail(self):
         try:
             item = self._pop_item_from_orderbook()
             status = item["status"]
@@ -187,8 +188,8 @@ class Exit:
                 logging.info("initial stop loss hit")
                 self._fn = None
                 return
-            elif status == "CANCELLED" or status == "REJECTED":
-                logging.info("order CANCELLED or REJECTED")
+            elif status == "CANCELED" or status == "REJECTED":
+                logging.info(f"order {self._order_id} is CANCELED or REJECTED")
                 self._fn = None
                 return
 
@@ -200,7 +201,7 @@ class Exit:
             self._update_targets()
 
         except Exception as e:
-            logging.error(f"{e} in update")
+            logging.error(f"{e} in look_to_trail")
             print_exc()
 
     def run(self, orders, ltps):
@@ -232,7 +233,7 @@ if __name__ == "__main__":
         for ltp in ltp_values:
             tsl._set_target()
             tsl._ltp = ltp
-            action = tsl.update()
+            action = tsl.look_to_trail()
             if action == tsl._order_id:
                 print("Exiting strategy.")
                 break

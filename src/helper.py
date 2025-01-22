@@ -1,3 +1,4 @@
+from logging import raiseExceptions
 from wserver import Wserver
 from toolkit.kokoo import timer
 from constants import O_CNFG, logging, O_SETG, D_SYMBOL
@@ -47,11 +48,15 @@ class Helper:
             history = cls.api.historical(kwargs)
             if isinstance(history, list):
                 previous_history = history
+            else:
+                raise ValueError(
+                    f"history type {type(history)} is not of expected type"
+                )
             return previous_history
         except Exception as e:
             print_exc()
-            logging.error(f"{e} while getting history")
             timer(5)
+            logging.error(f"{e} while getting history")
             cls.historical(instrument_token, previous_history)
 
     @classmethod
@@ -178,13 +183,10 @@ class Helper:
 
 
 if __name__ == "__main__":
-    import pickle
     import pandas as pd
     from constants import S_DATA
 
-    with open("../data/AQD468.pkl", "rb") as pkl:
-        obj = pickle.load(pkl)
-        Helper.api()
+    Helper.api()
 
     resp = Helper.trades()
     pd.DataFrame(resp).to_csv(S_DATA + "trades.csv")
@@ -198,3 +200,6 @@ if __name__ == "__main__":
         print(item)
         m2m += item["m2m"]
     print(f"{m2m=}")
+
+    resp = Helper.api.profile
+    print(resp)
