@@ -1,0 +1,14 @@
+kiteconnect
+wheel
+#setuptools==58.2.0
+setuptools
+pydantic==1.9
+PyYAML==6.0
+pyopenssl==22.1.0
+git+https://github.com/ecomsense/stock-brokers
+git+https://github.com/pannet1/toolkit
+pendulum
+pyotp
+pandas
+git+https://github.com/pannet1/kiteext.git
+polars

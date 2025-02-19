@@ -1,0 +1,37 @@
+trade:
+  start: "9:19" # affects candle start time
+  stop: "15:00" # not implemented
+  threshold: 5
+  targets: 6
+  base: NIFTY
+  expiry: "25123"
+  quantity: 75
+  atm_plus: 0 #default 0
+  candle: minute # possible values are minute | 3minute | 5minute
+program:
+  start: "9:15" #not implemented
+  stop: "15:30" #tmux exit
+log:
+  show: True
+  level: 10
+NIFTY:
+  diff: 50
+  depth: 15
+  exchange: NFO
+  instrument_token: 256265
+  underlying: NSE:NIFTY 50
+BANKNIFTY:
+  diff: 100
+  depth: 20
+  exchange: NFO
+  instrument_token: 260105
+  underlying: NSE:NIFTY BANK
+SENSEX:
+  diff: 100
+  depth: 20
+  exchange: BFO
+  instrument_token: 265
+  underlying: BSE:SENSEX
+exchanges:
+  - NSE
+  - NFO
