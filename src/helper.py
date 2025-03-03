@@ -1,4 +1,3 @@
-from stock_brokers.base import pre
 from wserver import Wserver
 from toolkit.kokoo import timer
 from constants import O_CNFG, logging, O_SETG
@@ -6,7 +5,6 @@ from traceback import print_exc
 import pendulum as pdlm
 from login_get_kite import get_kite
 from make_candles import get_ohlc
-from pprint import pprint
 
 
 # add a decorator to check if wait_till is past

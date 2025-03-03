@@ -64,11 +64,12 @@ def main():
         stop = O_SETG["program"]["stop"]
         while not is_time_past(stop):
             # get atm symbols
-            lst = symbols.build_chain(Helper.get_quote(symbols.instrument_token))
+            ltp = Helper.get_quote(symbols.instrument_token)
+            logging.info(f"current {ltp} of underlying")
+            lst = symbols.build_chain(ltp)
 
             # Process trade entry and get order_no, tsym as tuple
             order_symbols: list = enter_and_get_args(lst)
-
             manage_trades(order_symbols, symbols)
         else:
             kill_tmux()
@@ -82,5 +83,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
