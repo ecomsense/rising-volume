@@ -24,9 +24,13 @@ def initialize():
         print_exc()
 
 
-def enter_and_get_args(lst):
+def enter_and_get_args(symbols):
     args = []
     while len(args) == 0:
+        # get atm symbols
+        ltp = Helper.get_quote(symbols.instrument_token)
+        logging.info(f"current {ltp} of underlying")
+        lst = symbols.build_chain(ltp)
         args: list = Entry(lst[0], lst[1]).run()
     else:
         return args
@@ -63,13 +67,9 @@ def main():
         symbols = initialize()
         stop = O_SETG["program"]["stop"]
         while not is_time_past(stop):
-            # get atm symbols
-            ltp = Helper.get_quote(symbols.instrument_token)
-            logging.info(f"current {ltp} of underlying")
-            lst = symbols.build_chain(ltp)
 
             # Process trade entry and get order_no, tsym as tuple
-            order_symbols: list = enter_and_get_args(lst)
+            order_symbols: list = enter_and_get_args(symbols)
             manage_trades(order_symbols, symbols)
         else:
             kill_tmux()
