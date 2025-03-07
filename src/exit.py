@@ -16,8 +16,8 @@ class Exit:
         self._orderbook_item = {}
         self.cancel_at = None
         self.emit = "init"
-        self._fn = "check_buy_status"
         self._set_properties()
+        self._fn = "check_buy_status"
 
     """
         common method 
