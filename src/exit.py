@@ -2,6 +2,7 @@ from constants import O_SETG, logging
 from helper import Helper
 from traceback import print_exc
 import numpy as np
+import pendulum as pdlm
 
 
 class Exit:
@@ -13,7 +14,10 @@ class Exit:
         self._orders = []
         self._bands = []
         self._orderbook_item = {}
-        self._fn = "set_properties"
+        self.cancel_at = None
+        self.emit = "init"
+        self._fn = "check_buy_status"
+        self._set_properties()
 
     """
         common method 
@@ -24,12 +28,11 @@ class Exit:
             if self._order_id == buy_order["order_id"]:
                 return buy_order
 
-    def set_properties(self):
+    def _set_properties(self):
         item = self._pop_item_from_orderbook()
         self._symbol = item["symbol"]
         self._exchange = item["exchange"]
         self._quantity = item["quantity"]
-        self._fn = "check_buy_status"
 
     def check_buy_status(self):
         item = self._pop_item_from_orderbook()
@@ -39,6 +42,8 @@ class Exit:
         elif status == "CANCELED" or status == "REJECTED":
             logging.info(f"order {self._order_id} is CANCELED or REJECTED")
             self._fn = None
+        elif self.cancel_at and pdlm.now() > self.cancel_at:
+            Helper.api.order_cancel(self._order_id)
 
     """
         prepare and cover 
@@ -96,7 +101,6 @@ class Exit:
             logging.debug(sargs)
             self._order_id = Helper.place_order(sargs)
             if self._order_id is None:
-                self._fn = None
                 raise RuntimeError(
                     "unable to get order number for initial stop. please manage"
                 )
@@ -187,6 +191,7 @@ class Exit:
             status = item["status"]
             if status == "COMPLETE":
                 logging.info("initial stop loss hit")
+                self.emit = "5min"
                 self._fn = None
                 return
             elif status == "CANCELED" or status == "REJECTED":
@@ -195,6 +200,7 @@ class Exit:
                 return
 
             if self._is_exit_conditions():
+                self.emit = "cancel"
                 self._cover_to_close()
                 self._fn = None
                 return

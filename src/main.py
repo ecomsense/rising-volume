@@ -5,6 +5,7 @@ from exit import O_SETG, Exit
 from symbols import Symbols
 from toolkit.kokoo import is_time_past, kill_tmux
 from traceback import print_exc
+import pendulum as pdlm
 
 
 def initialize():
@@ -51,6 +52,25 @@ def manage_trades(order_symbols: list, symbols: Symbols):
                 ltps = Helper.ws.ltp
                 obj.run(Helper.orders(), ltps)
                 logging.info(f"next going to {obj._fn} for {obj._order_id}")
+
+            completed_strategies = [obj for obj in exit_strategies if obj._fn is None]
+            pending_strategies = [obj for obj in exit_strategies if obj._fn is not None]
+            if len(completed_strategies) == 1 and len(pending_strategies) == 1:
+                completed = completed_strategies[0]
+                pending = pending_strategies[0]
+                logging.info(f"pending stratergy is currently {pending._fn}")
+                emit = completed.emit
+                if emit == "cancel":
+                    logging.info("calling strategy is emitting cancel")
+                    if pending._fn == "check_buy_status":
+                        ltps = Helper.ws.ltp
+                        pending.run(Helper.orders(), ltps)
+                        if pending._fn == "check_buy_status":
+                            resp = Helper.api.order_cancel(pending._order_id)
+                            logging.info(f"{pending._order_id} cancel returned {resp}")
+                elif emit == "5min":
+                    logging.info("calling strategy is emitting 5min")
+                    pending.cancel_at = pdlm.now().add(minutes=5)
 
             # Filter out completed strategies
             exit_strategies = [obj for obj in exit_strategies if obj._fn is not None]
