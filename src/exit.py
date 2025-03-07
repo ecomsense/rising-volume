@@ -16,8 +16,7 @@ class Exit:
         self._orderbook_item = {}
         self.cancel_at = None
         self.emit = "init"
-        self._set_properties()
-        self._fn = "check_buy_status"
+        self._fn = "_set_properties"
 
     """
         common method 
@@ -33,6 +32,7 @@ class Exit:
         self._symbol = item["symbol"]
         self._exchange = item["exchange"]
         self._quantity = item["quantity"]
+        self._fn = "check_buy_status"
 
     def check_buy_status(self):
         item = self._pop_item_from_orderbook()
