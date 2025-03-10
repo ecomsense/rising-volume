@@ -9,6 +9,7 @@ from os import path
 from traceback import print_exc
 from pprint import pprint
 from toolkit.fileutils import Fileutils
+from toolkit.logger import Logger
 
 O_FUTL = Fileutils()
 S_DATA = "../data/"
