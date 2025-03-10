@@ -66,7 +66,8 @@ def manage_trades(order_symbols: list, symbols: Symbols):
                         ltps = Helper.ws.ltp
                         pending.run(Helper.orders(), ltps)
                         if pending._fn == "check_buy_status":
-                            resp = Helper.api.order_cancel(pending._order_id)
+                            kwargs = {"order_id": pending._order_id}
+                            resp = Helper.api.order_cancel(**kwargs)
                             logging.info(f"{pending._order_id} cancel returned {resp}")
                 elif emit == "5min":
                     logging.info("calling strategy is emitting 5min")
