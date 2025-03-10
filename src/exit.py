@@ -42,7 +42,7 @@ class Exit:
         elif status == "CANCELED" or status == "REJECTED":
             logging.info(f"order {self._order_id} is CANCELED or REJECTED")
             self._fn = None
-        elif self.cancel_at and pdlm.now() > self.cancel_at:
+        elif self.cancel_at and pdlm.now("Asia/Kolkata") > self.cancel_at:
             Helper.api.order_cancel(self._order_id)
 
     """

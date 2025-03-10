@@ -71,7 +71,7 @@ def manage_trades(order_symbols: list, symbols: Symbols):
                             logging.info(f"{pending._order_id} cancel returned {resp}")
                 elif emit == "5min":
                     logging.info("calling strategy is emitting 5min")
-                    pending.cancel_at = pdlm.now().add(minutes=5)
+                    pending.cancel_at = pdlm.now("Asia/Kolkata").add(minutes=5)
 
             # Filter out completed strategies
             exit_strategies = [obj for obj in exit_strategies if obj._fn is not None]
