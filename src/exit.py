@@ -43,7 +43,9 @@ class Exit:
             logging.info(f"order {self._order_id} is CANCELED or REJECTED")
             self._fn = None
         elif self.cancel_at and pdlm.now("Asia/Kolkata") > self.cancel_at:
-            Helper.api.order_cancel(self._order_id)
+            logging.debug(f"attempting to cancel {self._order_id}")
+            kwargs = {"order_id": self._order_id}
+            Helper.api.order_cancel(**kwargs)
 
     """
         prepare and cover 
