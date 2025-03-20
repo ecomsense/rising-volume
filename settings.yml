@@ -7,7 +7,7 @@ trade:
   expiry: "25123"
   quantity: 75
   atm_plus: 0 #default 0
-  candle: minute # possible values are minute | 3minute | 5minute
+  candle: 5 # possible values are 1 | 3 | 5
 program:
   start: "9:15" #not implemented
   stop: "15:30" #tmux exit
