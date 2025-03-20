@@ -117,6 +117,7 @@ class Helper:
                 "side",
                 "status",
                 "symbol",
+                "tag",
             ]
             lst = []
             lst = cls.api.orders

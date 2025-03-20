@@ -1,7 +1,7 @@
 import json
 import polars as pl
 from datetime import datetime
-from constants import TICK_FILE, logging
+from constants import TICK_FILE, logging, O_SETG
 
 MARKET_OPEN = datetime.strptime("00:00:00", "%H:%M:%S")
 
@@ -30,6 +30,8 @@ def read_ticks():
 
 def get_ohlc(token):
     """Reads tick data and calculates 5-minute OHLCV on the fly."""
+    candle = int(O_SETG["trade"]["candle"])
+
     df = read_ticks()
 
     if df is None or df.height == 0:
@@ -47,9 +49,9 @@ def get_ohlc(token):
     # Compute the 5-minute time bins
     df = df.with_columns(pl.col("timestamp").cast(pl.Datetime("ns")))
     df = df.with_columns(
-        ((pl.col("timestamp") - MARKET_OPEN).dt.total_minutes() // 5 * 5).alias(
-            "time_bin"
-        )
+        (
+            (pl.col("timestamp") - MARKET_OPEN).dt.total_minutes() // candle * candle
+        ).alias("time_bin")
     )
 
     # Aggregate OHLCV per 5-minute bin
