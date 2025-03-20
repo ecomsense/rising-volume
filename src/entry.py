@@ -70,16 +70,19 @@ class Entry:
                 # update history
                 _ = self._get_volume(sym)
                 his = getattr(self, f"{sym}_history")
-                high = his[-2]["high"]
-                order_no = Helper.entry_order(symbol, D_SYMBOL["exchange"], high)
-                if order_no:
-                    order_nos.append((order_no, symbol))
-                    txt = f"OHLC of prev candle is {his[-2]} currently candle is {his[-1]}"
-                    logging.debug(txt)
+                if his and len(his) >= 2:
+                    high = his[-2]["high"]
+                    order_no = Helper.entry_order(symbol, D_SYMBOL["exchange"], high)
+                    if order_no:
+                        order_nos.append((order_no, symbol))
+                        txt = f"OHLC of prev candle is {his[-2]} currently candle is {his[-1]}"
+                        logging.debug(txt)
+                else:
+                    logging.debug(f"no sufficient history for {symbol}")
             return order_nos
         except Exception as e:
             print_exc()
-            logging.error(f"{e} while get order numbers")
+            logging.error(f"ENTRY: {e} while get order numbers")
 
     def run(self):
         try:
