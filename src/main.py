@@ -33,11 +33,13 @@ def enter_and_get_args(symbols):
             ltp = Helper.get_quote(symbols.instrument_token)
             logging.info(f"current {ltp} of underlying")
             lst = symbols.build_chain(ltp)
-            logging.info(f"list of symbol to enter {lst}")
-            result: list = Entry(lst[0], lst[1]).run()
-            if result is not None:
-                logging.debug(f"entry returned result {result}")
-                args = result
+            if isinstance(lst, list):
+                result: list = Entry(lst[0], lst[1]).run()
+                if result is not None:
+                    logging.debug(f"entry returned result {result}")
+                    args = result
+            else:
+                logging.debug(f"list of symbol to enter {lst}")
         else:
             return args
     except Exception as e:
