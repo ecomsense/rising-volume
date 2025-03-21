@@ -34,6 +34,7 @@ def enter_and_get_args(symbols):
         lst = symbols.build_chain(ltp)
         result: list = Entry(lst[0], lst[1]).run()
         if result is not None:
+            logging.debug(f"entry returned result {result}")
             args = result
     else:
         return args
