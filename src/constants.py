@@ -24,7 +24,7 @@ if not O_FUTL.is_file_exists(S_LOG):
     """
     print("creating data dir")
     O_FUTL.add_path(S_LOG)
-elif O_FUTL.is_file_not_2day(S_LOG):
+else:
     O_FUTL.del_file(S_LOG)
     O_FUTL.add_path(S_LOG)
 

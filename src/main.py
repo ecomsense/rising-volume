@@ -33,11 +33,10 @@ def enter_and_get_args(symbols):
             ltp = Helper.get_quote(symbols.instrument_token)
             logging.info(f"current {ltp} of underlying")
             lst = symbols.build_chain(ltp)
-            if isinstance(lst, list):
+            if isinstance(lst, list) and len(lst) >= 2:
                 result: list = Entry(lst[0], lst[1]).run()
-                if result is not None:
-                    logging.debug(f"entry returned result {result}")
-                    args = result
+                logging.debug(f"entry returned result {result}")
+                args = result
             else:
                 logging.debug(f"list of symbol to enter {lst}")
         else:
@@ -98,10 +97,10 @@ def main():
         symbols = initialize()
         stop = O_SETG["program"]["stop"]
         while not is_time_past(stop):
-
             # Process trade entry and get order_no, tsym as tuple
             order_symbols: list = enter_and_get_args(symbols)
-            manage_trades(order_symbols, symbols)
+            if isinstance(order_symbols, list) and len(order_symbols) > 2:
+                manage_trades(order_symbols, symbols)
         else:
             kill_tmux()
         # TODO
