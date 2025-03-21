@@ -35,7 +35,6 @@ def enter_and_get_args(symbols):
             lst = symbols.build_chain(ltp)
             if isinstance(lst, list) and len(lst) >= 2:
                 result: list = Entry(lst[0], lst[1]).run()
-                logging.debug(f"entry returned result {result}")
                 args = result
             else:
                 logging.debug(f"list of symbol to enter {lst}")
@@ -99,7 +98,7 @@ def main():
         while not is_time_past(stop):
             # Process trade entry and get order_no, tsym as tuple
             order_symbols: list = enter_and_get_args(symbols)
-            if isinstance(order_symbols, list) and len(order_symbols) > 2:
+            if isinstance(order_symbols, list) and any(order_symbols):
                 manage_trades(order_symbols, symbols)
         else:
             kill_tmux()
