@@ -4,6 +4,14 @@ import json
 from datetime import datetime
 
 
+def write_to_flat_file(ticks):
+    with open(TICK_FILE, "a") as f:
+        for tick in ticks:
+            # tick["timestamp"] = datetime.now().isoformat()
+            tick["timestamp"] = int(datetime.now().timestamp() * 1e9)  # nanoseconds
+            f.write(json.dumps(tick) + "\n")
+
+
 class Wserver:
 
     def __init__(self, kite):
@@ -36,11 +44,7 @@ class Wserver:
             self.tokens = []
 
         self.ltp.update({dct["instrument_token"]: dct["last_price"] for dct in ticks})
-        with open(TICK_FILE, "a") as f:
-            for tick in ticks:
-                # tick["timestamp"] = datetime.now().isoformat()
-                tick["timestamp"] = int(datetime.now().timestamp() * 1e9)  # nanoseconds
-                f.write(json.dumps(tick) + "\n")
+        write_to_flat_file(ticks)
 
     def on_connect(self, ws, response):
         # self.tokens = [v for k, v in nse_symbols.items() if k == "instrument_token"]
@@ -80,5 +84,4 @@ if __name__ == "__main__":
 
     while True:
         print(Helper.ws.ltp)
-        Helper.ws.tokens = Helper.tokens
         timer(1)

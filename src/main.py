@@ -32,7 +32,9 @@ def enter_and_get_args(symbols):
         ltp = Helper.get_quote(symbols.instrument_token)
         logging.info(f"current {ltp} of underlying")
         lst = symbols.build_chain(ltp)
-        args: list = Entry(lst[0], lst[1]).run()
+        result: list = Entry(lst[0], lst[1]).run()
+        if result is not None:
+            args = result
     else:
         return args
 

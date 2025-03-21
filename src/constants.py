@@ -25,7 +25,8 @@ if not O_FUTL.is_file_exists(S_LOG):
     print("creating data dir")
     O_FUTL.add_path(S_LOG)
 elif O_FUTL.is_file_not_2day(S_LOG):
-    O_FUTL.nuke_file(S_LOG)
+    O_FUTL.del_file(S_LOG)
+    O_FUTL.add_path(S_LOG)
 
 TICK_FILE = S_DATA + "ticks.jsonl"
 if not O_FUTL.is_file_exists(TICK_FILE):
