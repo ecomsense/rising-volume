@@ -26,18 +26,23 @@ def initialize():
 
 
 def enter_and_get_args(symbols):
-    args = []
-    while len(args) == 0:
-        # get atm symbols
-        ltp = Helper.get_quote(symbols.instrument_token)
-        logging.info(f"current {ltp} of underlying")
-        lst = symbols.build_chain(ltp)
-        result: list = Entry(lst[0], lst[1]).run()
-        if result is not None:
-            logging.debug(f"entry returned result {result}")
-            args = result
-    else:
-        return args
+    try:
+        args = []
+        while len(args) == 0:
+            # get atm symbols
+            ltp = Helper.get_quote(symbols.instrument_token)
+            logging.info(f"current {ltp} of underlying")
+            lst = symbols.build_chain(ltp)
+            logging.info(f"list of symbol to enter {lst}")
+            result: list = Entry(lst[0], lst[1]).run()
+            if result is not None:
+                logging.debug(f"entry returned result {result}")
+                args = result
+        else:
+            return args
+    except Exception as e:
+        logging.error(f"{e} while enter and get args")
+        print_exc()
 
 
 def manage_trades(order_symbols: list, symbols: Symbols):
