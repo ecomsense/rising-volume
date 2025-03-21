@@ -7,6 +7,7 @@ import pendulum as pdlm
 
 class Exit:
     _targets = O_SETG["trade"]["targets"]
+    emit = -1
 
     def __init__(self, order_id, instrument_token):
         self._order_id = order_id
@@ -15,7 +16,6 @@ class Exit:
         self._bands = []
         self._orderbook_item = {}
         self.cancel_at = None
-        self.emit = "init"
         self._fn = "_set_properties"
 
     """
@@ -193,7 +193,7 @@ class Exit:
             status = item["status"]
             if status == "COMPLETE":
                 logging.info("initial stop loss hit")
-                self.emit = "5min"
+                self.emit = int(O_SETG["trade"]["candle"])
                 self._fn = None
                 return
             elif status == "CANCELED" or status == "REJECTED":
@@ -202,7 +202,7 @@ class Exit:
                 return
 
             if self._is_exit_conditions():
-                self.emit = "cancel"
+                self.emit = 0
                 self._cover_to_close()
                 self._fn = None
                 return

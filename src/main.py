@@ -68,7 +68,7 @@ def manage_trades(order_symbols: list, symbols: Symbols):
                 pending = pending_strategies[0]
                 logging.info(f"pending stratergy is currently {pending._fn}")
                 emit = completed.emit
-                if emit == "cancel":
+                if emit == 0:
                     logging.info("calling strategy is emitting cancel")
                     if pending._fn == "check_buy_status":
                         ltps = Helper.ws.ltp
@@ -77,9 +77,9 @@ def manage_trades(order_symbols: list, symbols: Symbols):
                             kwargs = {"order_id": pending._order_id}
                             resp = Helper.api.order_cancel(**kwargs)
                             logging.info(f"{pending._order_id} cancel returned {resp}")
-                elif emit == "5min":
-                    logging.info("calling strategy is emitting 5min")
-                    pending.cancel_at = pdlm.now("Asia/Kolkata").add(minutes=5)
+                elif emit > 0:
+                    logging.info(f"calling strategy is emitting {emit} min")
+                    pending.cancel_at = pdlm.now("Asia/Kolkata").add(minutes=emit)
 
             # Filter out completed strategies
             exit_strategies = [obj for obj in exit_strategies if obj._fn is not None]
