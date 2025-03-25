@@ -13,6 +13,7 @@ def write_to_flat_file(ticks):
 
 
 class Wserver:
+    is_orderbook_dirty = False
 
     def __init__(self, kite):
         self.ltp = {}
@@ -29,6 +30,7 @@ class Wserver:
         self.kws.on_error = self.on_error
         self.kws.on_reconnect = self.on_reconnect
         self.kws.on_noreconnect = self.on_noreconnect
+        self.kws.on_order_update = self.on_order_update
 
         # Infinite loop on the main thread. Nothing after this will run.
         # You have to use the pre-defined callbacks to manage subscriptions.
@@ -45,6 +47,10 @@ class Wserver:
 
         self.ltp.update({dct["instrument_token"]: dct["last_price"] for dct in ticks})
         write_to_flat_file(ticks)
+
+    def on_order_update(self, ws, data):
+        self.is_orderbook_dirty = True
+        logging.debug("order update : {}".format(data))
 
     def on_connect(self, ws, response):
         # self.tokens = [v for k, v in nse_symbols.items() if k == "instrument_token"]

@@ -27,6 +27,7 @@ class Helper:
     completed_trades = []
     ws = None
     ltp = None
+    _orderbook = []
 
     @classmethod
     def initialize_api(cls):
@@ -107,30 +108,34 @@ class Helper:
     @is_not_rate_limited
     def orders(cls):
         try:
-            trade_keys = [
-                "average_price",
-                "exchange",
-                "exchange_update_timestamp",
-                "instrument_token",
-                "order_id",
-                "order_type",
-                "price",
-                "product",
-                "quantity",
-                "side",
-                "status",
-                "symbol",
-                "tag",
-            ]
-            lst = []
-            lst = cls.api.orders
-            if any(lst):
-                lst = [{k: dct.get(k, None) for k in trade_keys} for dct in lst]
+            if cls.ws.is_orderbook_dirty:
+                trade_keys = [
+                    "average_price",
+                    "exchange",
+                    "exchange_update_timestamp",
+                    "instrument_token",
+                    "order_id",
+                    "order_type",
+                    "price",
+                    "product",
+                    "quantity",
+                    "side",
+                    "status",
+                    "symbol",
+                    "tag",
+                ]
+                lst = []
+                lst = cls.api.orders
+                if any(lst):
+                    cls._orderbook = [
+                        {k: dct.get(k, None) for k in trade_keys} for dct in lst
+                    ]
+                    cls.ws.is_orderbook_dirty = False
         except Exception as e:
             logging.error(f"{e} while getting orders")
             print_exc()
         finally:
-            return lst
+            return cls._orderbook
 
     @classmethod
     def find_fillprice_from_order_id(cls, order_id):
