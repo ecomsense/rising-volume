@@ -31,7 +31,7 @@ class RediStore:
     def read(self, key):
         try:
             data = []
-            for full_ticks in self.r.zrange(key, 0, -1)  # Retrieves all values
+            for full_ticks in self.r.zrange(key, 0, -1):  # Retrieves all values
                 tick = json.loads(full_ticks)
                 if tick["instrument_token"] == key:
                     data.append(
