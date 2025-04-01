@@ -1,15 +1,8 @@
-from constants import D_SYMBOL, TICK_FILE, logging, O_CNFG
+from constants import D_SYMBOL, logging, O_CNFG
 from kiteconnect import KiteTicker
-import json
-from datetime import datetime
 
-
-def write_to_flat_file(ticks):
-    with open(TICK_FILE, "a") as f:
-        for tick in ticks:
-            # tick["timestamp"] = datetime.now().isoformat()
-            tick["timestamp"] = int(datetime.now().timestamp() * 1e9)  # nanoseconds
-            f.write(json.dumps(tick) + "\n")
+from jsonl_file import JsonlFile
+from redi_store import RediStore
 
 
 class Wserver:
@@ -21,8 +14,10 @@ class Wserver:
 
         if O_CNFG["api_type"] == "bypass":
             self.kws = kite.kws
+            self.store = JsonlFile()
         else:
             self.kws = KiteTicker(api_key=kite.api_key, access_token=kite.access_token)
+            self.store = RediStore()
 
         self.kws.on_ticks = self.on_ticks
         self.kws.on_connect = self.on_connect
@@ -46,14 +41,14 @@ class Wserver:
             self.tokens = []
 
         self.ltp.update({dct["instrument_token"]: dct["last_price"] for dct in ticks})
-        write_to_flat_file(ticks)
+        self.store.write(ticks)
 
     def on_order_update(self, ws, data):
         self.is_orderbook_dirty = True
         logging.debug("order update : {}".format(data))
 
     def on_connect(self, ws, response):
-        # self.tokens = [v for k, v in nse_symbols.items() if k == "instrument_token"]
+        # self.tokens = [v s k, v in nse_symbols.items() if k == "instrument_token"]
         tokens = [D_SYMBOL["instrument_token"]]
         ws.subscribe(tokens)
         # Set RELIANCE to tick in `full` mode.

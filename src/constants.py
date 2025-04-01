@@ -28,21 +28,6 @@ else:
     O_FUTL.del_file(S_LOG)
     O_FUTL.add_path(S_LOG)
 
-TICK_FILE = S_DATA + "ticks.jsonl"
-if not O_FUTL.is_file_exists(TICK_FILE):
-    """
-    description:
-        create data dir and log file
-        if did not if file did not exists
-    input:
-         file name with full path
-    """
-    print("creating data dir")
-    O_FUTL.add_path(TICK_FILE)
-else:
-    O_FUTL.del_file(TICK_FILE)
-    O_FUTL.add_path(TICK_FILE)
-
 
 def yml_to_obj(arg=None):
     """

@@ -1,10 +1,11 @@
+from redi_store import RediStore
+from jsonl_file import JsonlFile
 from wserver import Wserver
 from toolkit.kokoo import timer
 from constants import O_CNFG, logging, O_SETG
 from traceback import print_exc
 import pendulum as pdlm
 from login_get_kite import get_kite
-from make_candles import get_ohlc
 
 
 # add a decorator to check if wait_till is past
@@ -71,7 +72,11 @@ class Helper:
     @classmethod
     def historical(cls, instrument_token, previous_history):
         try:
-            history = get_ohlc(instrument_token)
+            if O_CNFG["api_type"] == "bypass":
+                history = JsonlFile().candles(instrument_token)
+            else:
+                history = RediStore().candles(instrument_token)
+
             if any(history):
                 previous_history = history
             return previous_history
