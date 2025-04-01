@@ -2,6 +2,7 @@ from redis import Redis
 from constants import logging
 import json
 import pendulum as pdlm
+from make_candles import make_candles_from_ticks
 
 
 class RediStore:
@@ -62,14 +63,22 @@ class RediStore:
 if __name__ == "__main__":
     qs = RediStore()
 
+    ticks = []
+
     def update_fake_tick(qs):
         i = 0
         for i in range(200):
-            tick = dict(token=1234, timestamp=pdlm.now().timestamp(), last_price=20 + i)
+            tick = dict(
+                instrument_token=1234,
+                timestamp=pdlm.now().timestamp(),
+                last_price=20 + i,
+            )
             i += 1
-            qs.update(tick)
+            ticks.append(tick)
+        qs.update(ticks)
 
     update_fake_tick(qs)
-    print(len(qs.candle(1234)))
+    print(qs.candles(1234))
+    print(len(qs.candles(1234)))
     update_fake_tick(qs)
-    print(len(qs.candle(1111)))
+    print(len(qs.candles(1111)))
