@@ -25,7 +25,7 @@ class JsonlFile:
         self.JSONL_FILE = S_DATA + "ticks.jsonl" if not jsonl_file else jsonl_file
         self._cleanup()
 
-    def write(self, ticks):
+    def update(self, ticks):
         with open(self.JSONL_FILE, "a") as f:
             for tick in ticks:
                 tick["timestamp"] = int(datetime.now().timestamp() * 1e9)  # nanoseconds

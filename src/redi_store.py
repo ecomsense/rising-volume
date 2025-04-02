@@ -1,4 +1,5 @@
 from redis import Redis
+from datetime import datetime
 from constants import logging
 import json
 import pendulum as pdlm
@@ -22,10 +23,10 @@ class RediStore:
 
     def update(self, ticks):
         try:
-            for values in ticks:
-                key = values["instrument_token"]
-                timestamp = values.get("timestamp", pdlm.now().timestamp())
-                self.r.zadd(key, {json.dumps(values): timestamp})
+            for tick in ticks:
+                key = tick["instrument_token"]
+                tick["timestamp"] = int(datetime.now().timestamp() * 1e9)  # nanoseconds
+                self.r.zadd(key, {json.dumps(tick): pdlm.now().timestamp()})
         except Exception as e:
             logging.error(f"e {e} while update {self}")
 
@@ -34,15 +35,14 @@ class RediStore:
             data = []
             for full_ticks in self.r.zrange(key, 0, -1):  # Retrieves all values
                 tick = json.loads(full_ticks)
-                if tick["instrument_token"] == key:
-                    data.append(
-                        [
-                            tick["timestamp"],
-                            tick["instrument_token"],
-                            tick["last_price"],
-                            tick.get("volume_traded", 0),
-                        ]
-                    )
+                data.append(
+                    [
+                        tick["timestamp"],
+                        tick["instrument_token"],
+                        tick["last_price"],
+                        tick.get("volume_traded", 0),
+                    ]
+                )
         except Exception as e:
             logging.error(f"{e} while read {self}")
         finally:
