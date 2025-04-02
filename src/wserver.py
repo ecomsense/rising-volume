@@ -41,7 +41,7 @@ class Wserver:
             self.tokens = []
 
         self.ltp.update({dct["instrument_token"]: dct["last_price"] for dct in ticks})
-        self.store.write(ticks)
+        self.store.update(ticks)
 
     def on_order_update(self, ws, data):
         self.is_orderbook_dirty = True
