@@ -1,10 +1,8 @@
 import json
-from datetime import datetime
 from constants import logging, S_DATA, O_FUTL
 from toolkit.kokoo import timer
 from make_candles import make_candles_from_ticks
-
-MARKET_OPEN = datetime.strptime("00:00:00", "%H:%M:%S")
+import pendulum as pdlm
 
 
 class JsonlFile:
@@ -28,7 +26,7 @@ class JsonlFile:
     def update(self, ticks):
         with open(self.JSONL_FILE, "a") as f:
             for tick in ticks:
-                tick["timestamp"] = int(datetime.now().timestamp() * 1e9)  # nanoseconds
+                tick["timestamp"] = int(pdlm.now().timestamp() * 1e9)  # nanoseconds
                 f.write(json.dumps(tick) + "\n")
 
     def read(self, key):
