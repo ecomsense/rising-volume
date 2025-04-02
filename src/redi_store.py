@@ -19,7 +19,7 @@ class RediStore:
     def __init__(self, TTL_IN_MINUTES=30):
         self.MINUTES = TTL_IN_MINUTES
         self.r = Redis(host="localhost", port=6379, db=0)
-        self.r.flushdb()
+        self._cleanup()
 
     def update(self, ticks):
         try:
@@ -62,7 +62,7 @@ class RediStore:
 
 if __name__ == "__main__":
     qs = RediStore()
-
+    qs.r.flushdb()
     ticks = []
 
     def update_fake_tick(qs):
