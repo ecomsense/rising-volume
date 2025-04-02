@@ -10,16 +10,18 @@ class RediStore:
     def _cleanup(self):
         try:
             timestamp = pdlm.now().timestamp()
-            creation_time = 60 * self.MINUTES
+            ttl = 60 * self.MINUTES
+            expiry = timestamp - ttl
             for key in self.r.scan_iter("*"):
-                self.r.zremrangebyscore(key, 0, timestamp - creation_time)
+                if self.r.type(key) == b"zset":  # Ensure the key is a sorted set
+                    self.r.zremrangebyscore(key, 0, expiry)
         except Exception as e:
             logging.error(f"{e} while _cleanup {self}")
 
     def __init__(self, TTL_IN_MINUTES=30):
         self.MINUTES = TTL_IN_MINUTES
         self.r = Redis(host="localhost", port=6379, db=0)
-        # self._cleanup()
+        self._cleanup()
 
     def update(self, ticks):
         try:
