@@ -19,7 +19,7 @@ class RediStore:
     def __init__(self, TTL_IN_MINUTES=30):
         self.MINUTES = TTL_IN_MINUTES
         self.r = Redis(host="localhost", port=6379, db=0)
-        self._cleanup()
+        self.r.flushdb()
 
     def update(self, ticks):
         try:
