@@ -1,12 +1,11 @@
 import polars as pl
 from constants import logging, O_SETG
-import pendulum as pdlm
+from datetime import datetime
 
 
 def make_candles_from_ticks(data):
     try:
-        # MARKET_OPEN = datetime.strptime("00:00:00", "%H:%M:%S")
-        MARKET_OPEN = pdlm.today().at(0, 0, 0)
+        MARKET_OPEN = datetime.strptime("00:00:00", "%H:%M:%S")
         candle = int(O_SETG["trade"]["candle"])
 
         df = pl.DataFrame(data, schema=["timestamp", "token", "price", "volume_traded"])
