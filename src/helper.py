@@ -36,6 +36,10 @@ class Helper:
             cls.api = get_kite(**O_CNFG)
             cls.ws = Wserver(cls.api.kite)
             cls.wait_till = pdlm.now().add(seconds=1)
+            if O_CNFG["api_type"] == "bypass":
+                cls.store = JsonlFile()
+            else:
+                cls.store = RediStore()
         except Exception as e:
             logging.error(f"api {e}")
             print_exc()
@@ -72,11 +76,7 @@ class Helper:
     @classmethod
     def historical(cls, instrument_token, previous_history):
         try:
-            if O_CNFG["api_type"] == "bypass":
-                history = JsonlFile().candles(instrument_token)
-            else:
-                history = RediStore().candles(instrument_token)
-
+            history = cls.store.candles(instrument_token)
             if any(history):
                 previous_history = history
             return previous_history
